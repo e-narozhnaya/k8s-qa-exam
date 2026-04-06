@@ -5,6 +5,15 @@ on:
 jobs:
   quality-gate:
     runs-on: ubuntu-latest
+    services:
+      mysql-service:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: ${{ secrets.MYSQL_PASSWORD }}
+          MYSQL_DATABASE: dockerdb
+        ports:
+          - 3306:3306
+        options: --health-cmd="mysqladmin ping -h localhost -uroot -p${{ secrets.MYSQL_PASSWORD }}" --health-interval=10s --health-timeout=5s --health-retries=5
     steps:
       - name: Checkout Code
         uses: actions/checkout@v3
@@ -16,7 +25,7 @@ jobs:
 
       - name: Install Dependencies
         run: |
-          pip install yamllint pytest flask flask-mysqldb
+          pip install yamllint pytest flask pymysql cryptography
           # Мы ставим зависимости приложения, чтобы тесты могли его "пощупать"
 
       - name: Lint K8s Manifests
@@ -26,7 +35,7 @@ jobs:
 
       - name: Run Automated Tests
         env:
-          MYSQL_HOST: mysql-service
+          MYSQL_HOST: 127.0.0.1
           MYSQL_PASSWORD: ${{ secrets.MYSQL_PASSWORD }}
         run: |
           echo "=== ЗАПУСК АВТОТЕСТОВ (PYTEST) ==="
