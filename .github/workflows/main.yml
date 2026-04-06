@@ -28,6 +28,9 @@ jobs:
           yamllint k8s/app-stack.yml || echo "⚠️ Внимание: есть некритичные ошибки в отступах"
 
       - name: Run Automated Tests
+        env:
+          MYSQL_HOST: mysql-service
+          MYSQL_PASSWORD: ${{ secrets.MYSQL_PASSWORD }}
         run: |
           echo "=== ЗАПУСК АВТОТЕСТОВ (PYTEST) ==="
           # Запускаем тесты из папки tests с флагом -v для подробных логов
