@@ -8,15 +8,6 @@ on:
 jobs:
   quality-gate:
     runs-on: ubuntu-latest
-    services:
-      mysql-service:
-        image: mysql:8.0
-        env:
-          MYSQL_ROOT_PASSWORD: ${{ secrets.MYSQL_PASSWORD }}
-          MYSQL_DATABASE: dockerdb
-        ports:
-          - 3306:3306
-        options: --health-cmd="mysqladmin ping -h localhost -uroot -p${{ secrets.MYSQL_PASSWORD }}" --health-interval=10s --health-timeout=5s --health-retries=5
     steps:
       - name: Checkout Code
         uses: actions/checkout@v3
@@ -25,6 +16,22 @@ jobs:
         uses: actions/setup-python@v4
         with:
           python-version: '3.9'
+
+      - name: Start MySQL Database
+        env:
+          MYSQL_ROOT_PASSWORD: ${{ secrets.MYSQL_PASSWORD }}
+        run: |
+          echo "Запускаем MySQL..."
+          docker run -d --name test-mysql -p 3306:3306 -e MYSQL_ROOT_PASSWORD=$MYSQL_ROOT_PASSWORD -e MYSQL_DATABASE=dockerdb mysql:8.0
+          
+          echo "Ждем готовности MySQL..."
+          for i in {1..30}; do
+            if docker exec test-mysql mysqladmin ping -uroot -p$MYSQL_ROOT_PASSWORD --silent; then
+              echo "MySQL готов!"
+              break
+            fi
+            sleep 2
+          done
 
       - name: Install Dependencies
         run: |
