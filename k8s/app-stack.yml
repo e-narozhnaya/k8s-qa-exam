@@ -1,0 +1,75 @@
+# --- ЗАПРОС НА ДИСК (Drive Sharing / Persistence) ---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: mysql-pvc
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 1Gi # Резервируем 1 ГБ под базу
+---
+# --- Блок 1: База Данных MySQL ---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mysql-deployment
+spec:
+  selector:
+    matchLabels:
+      app: mysql
+  template:
+    metadata:
+      labels:
+        app: mysql
+    spec:
+      containers:
+      - name: mysql
+        image: mymysql #образ базы
+        env:
+        - name: MYSQL_ROOT_PASSWORD
+          value: "mypassword"
+        ports:
+        - containerPort: 3306
+# ПРИВЯЗКА ДИСКА К ПАПКЕ ВНУТРИ
+        volumeMounts:
+        - name: mysql-storage
+          mountPath: /var/lib/mysql
+      volumes:
+      - name: mysql-storage
+        persistentVolumeClaim:
+          claimName: mysql-pvc
+---
+# --- Блок 2: Внутренняя сеть для Базы ---
+apiVersion: v1
+kind: Service
+metadata:
+  name: mysql-service # Flask будет искать базу по этому имени!
+spec:
+  selector:
+    app: mysql
+  ports:
+    - port: 3306
+---
+# --- Блок 3: Приложение Flask ---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: flask-deployment
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: qa-app
+  template:
+    metadata:
+      labels:
+        app: qa-app
+    spec:
+      containers:
+      - name: flask-container
+        image: flask-qa-app # образ приложения
+        imagePullPolicy: IfNotPresent
+        ports:
+        - containerPort: 5000
