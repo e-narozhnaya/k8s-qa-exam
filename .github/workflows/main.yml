@@ -1,13 +1,31 @@
 name: QA-Ops-KP-Pipeline
 on:
-  workflow_dispatch: 
+  workflow_dispatch:
+    inputs:
+      target_env:
+        description: 'Выберите Environment'
+        required: true
+        default: 'local'
+        type: choice
+        options:
+          - local
+          - staging
+          - 127.0.0.1
+      test_type:
+        description: 'Какие тесты запустить?'
+        required: true
+        default: 'smoke'
+        type: choice
+        options:
+          - smoke
+          - regression
 
 jobs:
   quality-gate:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4 # Обновил до актуальной версии v4
 
       - name: Setup Python
         uses: actions/setup-python@v4
@@ -44,10 +62,14 @@ jobs:
         env:
           MYSQL_HOST: 127.0.0.1
           MYSQL_PASSWORD: ${{ secrets.MYSQL_PASSWORD }}
+          # Передаем параметр из меню в код
+          CHOSEN_ENV: ${{ github.event.inputs.target_env }}
         run: |
           echo "=== ЗАПУСК АВТОТЕСТОВ (PYTEST) ==="
-          # Запускаем тесты из папки tests с флагом -v для подробных логов
-          python -m pytest tests/ -v
+          echo "Выбран стенд: $CHOSEN_ENV"
+          echo "Выбран маркер: ${{ github.event.inputs.test_type }}"
+          # Запускаем тесты из папки tests с флагом -m для нужных тестов
+          python -m pytest tests/ -m ${{ github.event.inputs.test_type }} -v
         # Если тесты упадут, этот шаг станет красным ❌
 
       - name: Dockerfile Security Scan
@@ -59,9 +81,9 @@ jobs:
   deploy-status:
     needs: quality-gate
     runs-on: ubuntu-latest
-    if: github.event_name == 'push' # Деплой имитируем только при пуше в основную ветку
+    # Строка с ограничением на push удалена
     steps:
       - name: Analyze Results & Deploy
         run: |
-          echo "Все этапы проверки пройдены!"
+          echo "Все этапы проверки для стенда ${{ github.event.inputs.target_env }} пройдены!"
           echo "Контейнеры готовы к деплою. 🚀"
