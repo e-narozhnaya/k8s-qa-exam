@@ -1,4 +1,4 @@
-name: QA-Ops-Final-Exam-Pipeline
+name: QA-Ops-KP-Pipeline
 on:
   workflow_dispatch: 
 
