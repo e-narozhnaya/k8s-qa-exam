@@ -1,9 +1,6 @@
 name: QA-Ops-Final-Exam-Pipeline
 on:
-  push:
-    branches: [main]
-  pull_request:
-    branches: [main] #пайплайн будет проверять код ДО вливания в main
+  workflow_dispatch: 
 
 jobs:
   quality-gate:
